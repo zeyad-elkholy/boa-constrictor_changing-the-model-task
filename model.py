@@ -21,7 +21,7 @@ def BoaConstrictor(d_model=256, num_layers=4, vocab_size=256, device="cuda"):
                 hidden_size=d_model,
                 num_layers=num_layers,
                 batch_first=True,
-                dropout=0.1 if num_layers > 1 else 0.0,
+                dropout=0.0,
             )
             self.head = nn.Sequential(
                 nn.Linear(d_model, d_model),
