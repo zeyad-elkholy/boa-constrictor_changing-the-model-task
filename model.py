@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 
+torch.backends.cudnn.enabled = False  
 def BoaConstrictor(d_model=256, num_layers=4, vocab_size=256, device="cuda"):
     """ Construct a BoaBytePredictor using pytorch lstm. """
     class LSTMCache:
