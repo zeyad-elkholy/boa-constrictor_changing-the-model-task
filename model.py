@@ -4,6 +4,11 @@ import numpy as np
 
 def BoaConstrictor(d_model=256, num_layers=4, vocab_size=256, device="cuda"):
     """ Construct a BoaBytePredictor using pytorch lstm. """
+    class LSTMCache:
+        """Mutable cache wrapper so codec.py can pass the same object each step."""
+        def __init__(self, h0, c0):
+            self.h = h0
+            self.c = c0
 
     class BoaBytePredictor(nn.Module):
         """ Mamba model adapted to predict the next byte in a sequence. """
@@ -35,13 +40,14 @@ def BoaConstrictor(d_model=256, num_layers=4, vocab_size=256, device="cuda"):
             d = self.lstm.hidden_size
             h0 = torch.zeros(n, batch_size, d, device=device)
             c0 = torch.zeros(n, batch_size, d, device=device)
-            return (h0, c0)
+            return LSTMCache(h0, c0)
         @torch.inference_mode()
         def step(self, byte_t, cache):
-            # byte_t: [B] -> logits: [B, 256]
-            h = self.embedding(byte_t).squeeze(1)  # [B, D]
-            h, cache = self.lstm(h, cache)
-            logits = self.head(h.squeeze(0))  
+            h = self.embedding(byte_t.long()).unsqueeze(1)       # [B] -> [B,1,d]
+            out, (h_new, c_new) = self.lstm(h, (cache.h, cache.c))  # unpack cache
+            cache.h = h_new                                      # update in place
+            cache.c = c_new                                      # update in place
+            logits = self.head(out.squeeze(1))                   # [B, vocab_size]
             return logits
     model = BoaBytePredictor(d_model=d_model, num_layers=num_layers, vocab_size=vocab_size)
     return model
